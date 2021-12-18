@@ -1,0 +1,79 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.34.4.
+--
+-- see: https://github.com/sol/hpack
+
+name:           chip8
+version:        0.0.1.0
+description:    Please see the README on GitHub at <https://github.com/nixant/chip8#readme>
+homepage:       https://github.com/nixant/chip8#readme
+bug-reports:    https://github.com/nixant/chip8/issues
+author:         Nishant Kaushik
+maintainer:     nixantkaushik@gmail.com
+copyright:      2021 Nishant Kaushik
+license:        BSD3
+license-file:   LICENSE
+build-type:     Simple
+extra-source-files:
+    README.md
+    ChangeLog.md
+
+source-repository head
+  type: git
+  location: https://github.com/nixant/chip8
+
+library
+  exposed-modules:
+      Emulator.Chip8
+      Emulator.Chip8.CPU
+      Emulator.Chip8.Instructions
+      Emulator.Chip8.Memory
+      Emulator.Chip8.Registers
+      Emulator.Chip8.Screen
+      Emulator.Chip8.Stack
+      Emulator.Chip8.Timers
+  other-modules:
+      Paths_chip8
+  hs-source-dirs:
+      src
+  build-depends:
+      base >=4.7 && <5
+    , containers
+    , data-default
+    , mtl
+    , stm
+  default-language: Haskell2010
+
+executable chip8
+  main-is: Main.hs
+  other-modules:
+      Paths_chip8
+  hs-source-dirs:
+      app
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      base >=4.7 && <5
+    , chip8
+    , containers
+    , data-default
+    , mtl
+    , stm
+  default-language: Haskell2010
+
+test-suite chip8-test
+  type: exitcode-stdio-1.0
+  main-is: Spec.hs
+  other-modules:
+      Paths_chip8
+  hs-source-dirs:
+      test
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      base >=4.7 && <5
+    , chip8
+    , containers
+    , data-default
+    , mtl
+    , stm
+  default-language: Haskell2010
