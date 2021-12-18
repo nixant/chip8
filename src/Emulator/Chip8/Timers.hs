@@ -18,7 +18,7 @@ soundTimerFn 0 = beep
 soundTimerFn _ = return ()
 
 beep :: IO ()
-beep = putStrLn "b -- e -- e -- p"
+beep = putChar '\a' -- putStrLn "b -- e -- e -- p"
 
 data Timers =
   Timers
