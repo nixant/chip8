@@ -1,8 +1,10 @@
 {-# LANGUAGE FlexibleInstances #-}
+
 module Emulator.Chip8.Timers where
-import Data.Word (Word8)
+
 import Control.Concurrent.STM (TVar, atomically, modifyTVar', readTVarIO)
 import Data.Default
+import Data.Word (Word8)
 
 data Timer =
   Timer
@@ -27,7 +29,7 @@ data Timers =
     }
 
 instance Default Timers where
-    def = Timers {dt = Timer 4 delayTimerFn, st = Timer 4 soundTimerFn}
+  def = Timers {dt = Timer 4 delayTimerFn, st = Timer 4 soundTimerFn}
 
 tickTimer :: Timer -> Timer
 tickTimer (Timer 0 f) = Timer 0 f

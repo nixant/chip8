@@ -1,21 +1,21 @@
 {-# LANGUAGE ConstraintKinds #-}
+
 module Emulator.Chip8.CPU where
 
-import Control.Concurrent.STM.TVar
 import Control.Concurrent.MVar
+import Control.Concurrent.STM.TVar
 import Control.Monad.Reader
 import Control.Monad.STM
+import Data.Bits (Bits((.|.), shiftL), (.&.), shiftR, xor)
+import Data.Default
 import qualified Data.Map as M
 import Data.Maybe (fromMaybe)
 import Data.Word (Word16, Word8)
-import Emulator.Chip8.Stack
-import Emulator.Chip8.Timers
+import Emulator.Chip8.Instructions
 import Emulator.Chip8.Memory
 import Emulator.Chip8.Registers
-import Data.Default
-import Data.Bits ((.&.), shiftR, Bits (shiftL, (.|.)), xor)
-import Emulator.Chip8.Instructions
-
+import Emulator.Chip8.Stack
+import Emulator.Chip8.Timers
 
 type HasChip8 m = (HasStack m, HasTimers m, HasMemory m, HasRegisters m)
 

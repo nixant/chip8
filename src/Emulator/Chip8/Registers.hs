@@ -1,11 +1,12 @@
 {-# LANGUAGE FlexibleInstances #-}
+
 module Emulator.Chip8.Registers where
 
-import qualified Data.Map as M
-import Data.Word (Word8)
-import Control.Concurrent.STM (TVar, readTVarIO, atomically, modifyTVar')
-import Data.Maybe (fromMaybe, fromJust)
+import Control.Concurrent.STM (TVar, atomically, modifyTVar', readTVarIO)
 import Data.Default
+import qualified Data.Map as M
+import Data.Maybe (fromJust, fromMaybe)
+import Data.Word (Word8)
 
 data Register
   = V0
@@ -32,7 +33,7 @@ newtype Registers =
     }
 
 instance Default Registers where
-    def = Registers $ M.fromList $ zip [V0 .. VF] (repeat 0)
+  def = Registers $ M.fromList $ zip [V0 .. VF] (repeat 0)
 
 class HasRegisters a where
   getReg :: a -> Register -> IO Word8
@@ -42,7 +43,10 @@ class HasRegisters a where
 
 instance HasRegisters (TVar Registers) where
   getReg rs r = fromMaybe 0 . M.lookup r . registers <$> readTVarIO rs
-  setReg rs r v = atomically $ modifyTVar' rs (\(Registers regs) -> Registers $ M.insert r v regs)
+  setReg rs r v =
+    atomically $
+    modifyTVar' rs (\(Registers regs) -> Registers $ M.insert r v regs)
 
-mkRegister r | r `elem` [0 .. 0xF] = fromJust $ lookup r $ zip [0 ..] [V0 .. VF]
-             | otherwise = error "invalid register"
+mkRegister r
+  | r `elem` [0 .. 0xF] = fromJust $ lookup r $ zip [0 ..] [V0 .. VF]
+  | otherwise = error "invalid register"
