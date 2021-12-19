@@ -1,6 +1,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# OPTIONS_GHC -Wno-incomplete-patterns #-}
 
 module Emulator.Chip8 where
@@ -119,6 +120,48 @@ execute (BAXY vx vy) = do
 execute (BXXY vx vy) = do
   c8 <- ask
   liftIO $ getReg c8 vy >>= modifyReg c8 vx . xor
+execute (AXY vx vy) = do
+  c8 <- ask
+  liftIO $ do
+    x <- fromIntegral <$> getReg c8 vx
+    y <- fromIntegral <$> getReg c8 vy
+    let (s :: Word16) = x + y
+    if s > 255
+      then setReg c8 VF 1
+      else setReg c8 VF 0
+    setReg c8 vx $ fromIntegral s
+execute (MXY vx vy) = do
+  c8 <- ask
+  liftIO $ do
+    x <- fromIntegral <$> getReg c8 vx
+    y <- fromIntegral <$> getReg c8 vy
+    if x < y
+      then setReg c8 VF 0
+      else setReg c8 VF 1
+    setReg c8 vx $ x - y
+execute (RSX vx) = do
+  c8 <- ask
+  liftIO $ do
+    x <- getReg c8 vx
+    let vf = x .&. 1
+    setReg c8 vx $ x `shiftR` 1
+    setReg c8 vx vf
+execute (MYX vx vy) = do
+  c8 <- ask
+  liftIO $ do
+    x <- fromIntegral <$> getReg c8 vx
+    y <- fromIntegral <$> getReg c8 vy
+    if y < x
+      then setReg c8 VF 0
+      else setReg c8 VF 1
+    setReg c8 vx $ y - x
+execute (LSX vx) = do
+  c8 <- ask
+  liftIO $ do
+    x <- getReg c8 vx
+    let vf = x `shiftR` 7
+    setReg c8 vx $ x `shiftL` 1
+    setReg c8 vx vf
 execute (VXYNE vx vy) = do
   c8 <- ask
   eq <- liftIO $ (/=) <$> getReg c8 vx <*> getReg c8 vy
