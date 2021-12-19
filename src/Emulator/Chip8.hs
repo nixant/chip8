@@ -22,6 +22,7 @@ import Emulator.Chip8.Memory
 import Emulator.Chip8.Registers
 import Emulator.Chip8.Stack
 import Emulator.Chip8.Timers
+import System.Random (randomRIO)
 
 newtype Emu a =
   Emu (ReaderT Chip8 IO a)
@@ -75,6 +76,9 @@ decode (8, x, y, 6) = RSX (mkRegister x) -- vx >> = 1
 decode (8, x, y, 7) = MYX (mkRegister x) (mkRegister y) -- vx == vy - vx
 decode (8, x, y, 0xE) = LSX (mkRegister x) -- vx << = 1
 decode (9, x, y, 0) = VXYNE (mkRegister x) (mkRegister x) -- skip next if vx /= vy
+decode (0xA, a, b, c) = SI $ mkWord12 (a,b,c)
+decode (0xB, a, b, c) = JMV0 $ mkWord12 (a,b,c)
+decode (0xC, x, a, b) = RAND (mkRegister x) $ mkWord8 (a,b)
 
 execute :: (HasChip8 env, MonadReader env m, MonadIO m) => Instruction -> m ()
 execute NOP = return ()
@@ -166,6 +170,18 @@ execute (VXYNE vx vy) = do
   c8 <- ask
   eq <- liftIO $ (/=) <$> getReg c8 vx <*> getReg c8 vy
   when eq $ liftIO $ modifyPC c8 (+ 2)
+execute (SI addr) = do
+  c8 <- ask
+  liftIO $ setIR c8 addr
+execute (JMV0 addr) = do
+  c8 <- ask
+  x <- liftIO $ getReg c8 V0
+  execute (JMP $ fromIntegral x + addr)
+execute (RAND vx nn) = do
+  c8 <- ask
+  liftIO $ do
+    rn <- randomRIO (minBound, maxBound)
+    setReg c8 vx (nn .&. rn)
 execute x = error $ "unimplemented instruction: " <> show x
 
 cycleEmu :: (HasChip8 env, MonadReader env m, MonadIO m) => m ()

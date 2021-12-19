@@ -18,6 +18,7 @@ dependencies:
 - data-default
 - stm
 - mtl
+- random
 
 library:
   source-dirs: src
