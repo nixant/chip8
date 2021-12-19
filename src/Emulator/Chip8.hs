@@ -23,6 +23,7 @@ import Emulator.Chip8.Registers
 import Emulator.Chip8.Stack
 import Emulator.Chip8.Timers
 import System.Random (randomRIO)
+import Emulator.Chip8.Registers (mkRegister)
 
 newtype Emu a =
   Emu (ReaderT Chip8 IO a)
@@ -79,6 +80,19 @@ decode (9, x, y, 0) = VXYNE (mkRegister x) (mkRegister x) -- skip next if vx /= 
 decode (0xA, a, b, c) = SI $ mkWord12 (a,b,c)
 decode (0xB, a, b, c) = JMV0 $ mkWord12 (a,b,c)
 decode (0xC, x, a, b) = RAND (mkRegister x) $ mkWord8 (a,b)
+decode (0xD, x, y, a) = DRAW (mkRegister x) (mkRegister y) a
+decode (0xE,x,9,0xE) = KP (mkRegister x)
+decode (0xE,x,0xA,1) = KNP (mkRegister x)
+decode (0xF,x,0,7) = SXDT (mkRegister x)
+decode (0xF,x,0,0xA) = KINP (mkRegister x)
+decode (0xF,x,1,5) = SDTX (mkRegister x)
+decode (0xF,x,1,8) = SSTX (mkRegister x)
+decode (0xF,x,1,0xE) = SIX (mkRegister x)
+decode (0xF,x,2,9) = SIFX (mkRegister x)
+decode (0xF,x,3,3) = SIBX (mkRegister x)
+decode (0xF,x,5,5) = SMX (mkRegister x)
+decode (0xF,x,6,5) = SXM (mkRegister x)
+decode x = error $ "decode error/ invalid opcode: " <> show x
 
 execute :: (HasChip8 env, MonadReader env m, MonadIO m) => Instruction -> m ()
 execute NOP = return ()
@@ -182,6 +196,8 @@ execute (RAND vx nn) = do
   liftIO $ do
     rn <- randomRIO (minBound, maxBound)
     setReg c8 vx (nn .&. rn)
+execute (DRAW vx vy a) = return () -- TODO: implement display
+
 execute x = error $ "unimplemented instruction: " <> show x
 
 cycleEmu :: (HasChip8 env, MonadReader env m, MonadIO m) => m ()

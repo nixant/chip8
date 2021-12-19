@@ -28,4 +28,16 @@ data Instruction
   | SI Word16-- ANNN (set IR to NNN)
   | JMV0 Word16-- BNNN (jump to V0 + NNN)
   | RAND Register Word8 -- CXNN (set VX to random && NN)
+  | DRAW Register Register Word8 -- DXYN (draw an 8xN size sprite at values at VX and VY)
+  | KP Register -- EX9E
+  | KNP Register -- EXA1
+  | SXDT Register -- FX07 (set VX to Delay Timer)
+  | KINP Register -- FX0A (wait for key press | blocking)
+  | SDTX Register -- FX15 (dt = vx)
+  | SSTX Register -- FX18 (st = vx)
+  | SIX Register -- FX1E (I += VX)
+  | SIFX Register -- FX29 (set I to font character in VX)
+  | SIBX Register -- FX33 (set BCD encoding of VX into I)
+  | SMX Register -- FX55 (store V0 to VX into RAM starting at addr at I)
+  | SXM Register -- FX65 (store RAM into V0 to VX starting at addr at I)
   deriving (Eq, Show)
