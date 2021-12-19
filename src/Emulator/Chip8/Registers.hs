@@ -2,11 +2,11 @@
 
 module Emulator.Chip8.Registers where
 
-import Control.Concurrent.STM (TVar, atomically, modifyTVar', readTVarIO)
+import Control.Concurrent.STM (TVar, atomically, modifyTVar', readTVarIO, writeTVar)
 import Data.Default
 import qualified Data.Map as M
 import Data.Maybe (fromJust, fromMaybe)
-import Data.Word (Word8)
+import Data.Word (Word8, Word16)
 
 data Register
   = V0
@@ -50,3 +50,13 @@ instance HasRegisters (TVar Registers) where
 mkRegister r
   | r `elem` [0 .. 0xF] = fromJust $ lookup r $ zip [0 ..] [V0 .. VF]
   | otherwise = error "invalid register"
+
+class HasIR a where
+  getIR :: a -> IO Word16
+  setIR :: a -> Word16 -> IO ()
+  modifyIR :: a -> (Word16 -> Word16) -> IO ()
+  modifyIR c f = getIR c >>= setIR c . f
+
+instance HasIR (TVar Word16) where
+  getIR = readTVarIO
+  setIR ir = atomically . writeTVar ir

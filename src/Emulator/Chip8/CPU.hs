@@ -17,7 +17,7 @@ import Emulator.Chip8.Registers
 import Emulator.Chip8.Stack
 import Emulator.Chip8.Timers
 
-type HasChip8 m = (HasStack m, HasTimers m, HasMemory m, HasRegisters m)
+type HasChip8 m = (HasStack m, HasTimers m, HasMemory m, HasRegisters m, HasIR m)
 
 instance HasStack Chip8 where
   getStack = getStack . stack
@@ -37,10 +37,14 @@ instance HasRegisters Chip8 where
   getReg = getReg . reg
   setReg = setReg . reg
 
+instance HasIR Chip8 where
+  getIR = getIR . ir
+  setIR = setIR . ir
+
 defChip8 = do
   ram' <- newTVarIO def -- Memory 0x200 $ M.fromList $ (\x -> (x,fromIntegral $ x `mod` 256)) <$> [0..4095] 
   reg' <- newTVarIO def --Registers $ M.fromList $ zip [V0 .. VF] (repeat 0)
-  ir' <- newEmptyMVar
+  ir' <- newTVarIO def
   stack' <- newTVarIO def
   timers' <- newTVarIO def
   return $ Chip8 ram' reg' ir' stack' timers' [] []
@@ -49,7 +53,7 @@ data Chip8 =
   Chip8
     { ram :: TVar Memory -- Add a newtype with size 4096
     , reg :: TVar Registers
-    , ir :: MVar Word16
+    , ir :: TVar Word16
     , stack :: TVar Stack -- Add a newtype with fixed size 16
     , timers :: TVar Timers
     , scr :: [Bool] -- Add a newtype with dimensions 64*32
