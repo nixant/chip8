@@ -26,6 +26,10 @@ instance HasStack Chip8 where
 
 instance HasTimers Chip8 where
   tick = tick . timers
+  getDT = getDT . timers
+  setDT = setDT . timers
+  getST = getST . timers
+  setST = setST . timers
 
 instance HasMemory Chip8 where
   setPC = setPC . ram

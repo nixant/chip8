@@ -56,6 +56,9 @@ mkWord8 (a, b) = fromIntegral a `shiftL` 4 .|. fromIntegral b
 
 mkWord12 (a, b, c) = fromIntegral a `shiftL` 8 .|. mkWord8 (b, c)
 
+getBCD :: Word8 -> [Word8]
+getBCD = fmap (read . (:[])) . show
+
 decode :: (Word8, Word8, Word8, Word8) -> Instruction
 decode (0, 0, 0, 0) = NOP -- no operation
 decode (0, 0, 0xE, 0) = CLS -- clear screen
@@ -196,8 +199,46 @@ execute (RAND vx nn) = do
   liftIO $ do
     rn <- randomRIO (minBound, maxBound)
     setReg c8 vx (nn .&. rn)
-execute (DRAW vx vy a) = return () -- TODO: implement display
-
+execute (DRAW vx vy n) = return () -- TODO: implement display
+execute (KP vx) = do -- TODO: Implement keys for KP, KNP, KINP
+  return ()
+execute (KNP vx) = do
+  return ()
+execute (SXDT vx) = do
+  c8 <- ask
+  liftIO $ getDT c8 >>= setReg c8 vx
+execute (KINP vx) = do
+  return ()
+execute (SDTX vx) = do
+  c8 <- ask
+  liftIO $ getReg c8 vx >>= setDT c8
+execute (SSTX vx) = do
+  c8 <- ask
+  liftIO $ getReg c8 vx >>= setST c8
+execute (SIX vx) = do
+  c8 <- ask
+  liftIO $ getReg c8 vx >>= modifyIR c8 . (+) . fromIntegral
+execute (SIFX vx) = do
+  c8 <- ask
+  liftIO $ getReg c8 vx >>= setIR c8 . (*5) . fromIntegral
+execute (SIBX vx) = do
+  c8 <- ask
+  liftIO $ do
+    addr <- getIR c8
+    [a,b,c] <- getBCD <$> getReg c8 vx
+    setMemAt c8 addr a
+    setMemAt c8 (addr + 1) b
+    setMemAt c8 (addr + 2) c
+execute (SMX vx) = do
+  c8 <- ask
+  liftIO $ do
+    i <- getIR c8
+    mapM_ (\(v,addr) -> getReg c8 v >>= setMemAt c8 addr) $ zip [V0 .. vx] [i ..]
+execute (SXM vx) = do
+  c8 <- ask
+  liftIO $ do
+    i <- getIR c8
+    mapM_ (\(v,addr) -> getMemAt c8 addr >>= setReg c8 v) $ zip [V0 .. vx] [i ..]
 execute x = error $ "unimplemented instruction: " <> show x
 
 cycleEmu :: (HasChip8 env, MonadReader env m, MonadIO m) => m ()
