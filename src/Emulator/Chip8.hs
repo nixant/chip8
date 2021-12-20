@@ -14,7 +14,7 @@ import Control.Monad.STM
 import Data.Bits (Bits((.|.), shiftL), (.&.), shiftR, xor)
 import Data.Default
 import qualified Data.Map as M
-import Data.Maybe (fromMaybe)
+import Data.Maybe (fromMaybe, catMaybes)
 import Data.Word (Word16, Word8)
 import Emulator.Chip8.CPU
 import Emulator.Chip8.Instructions
@@ -24,6 +24,8 @@ import Emulator.Chip8.Stack
 import Emulator.Chip8.Timers
 import System.Random (randomRIO)
 import Emulator.Chip8.Registers (mkRegister)
+import Emulator.Chip8.Display
+import Control.Concurrent (writeList2Chan)
 
 newtype Emu a =
   Emu (ReaderT Chip8 IO a)
@@ -199,7 +201,23 @@ execute (RAND vx nn) = do
   liftIO $ do
     rn <- randomRIO (minBound, maxBound)
     setReg c8 vx (nn .&. rn)
-execute (DRAW vx vy n) = return () -- TODO: implement display
+execute (DRAW vx vy n) = do -- TODO: implement display
+  c8 <- ask
+  x <- liftIO $ getReg c8 vx
+  y <- liftIO $ getReg c8 vy
+  i <- liftIO $ getIR c8
+  p <- forM [0 .. n - 1] $ \row -> liftIO $ do
+          let addr = i + fromIntegral row
+          pixels <- getMemAt c8 addr
+          forM [0 .. 7] $ \col -> do
+            if pixels .&. (128 `shiftR` col) /= 0
+              then do
+                let x' = (x + fromIntegral col) `mod` fromIntegral windowWidth
+                let y' = (y + row) `mod` fromIntegral windowHeight
+                return $ Just (x', y')
+              else return Nothing
+  let ps = catMaybes $ concat p
+  liftIO $ writeManyBuffer c8 $ uncurry Draw <$> ps
 execute (KP vx) = do -- TODO: Implement keys for KP, KNP, KINP
   return ()
 execute (KNP vx) = do

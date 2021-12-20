@@ -19,6 +19,8 @@ dependencies:
 - stm
 - mtl
 - random
+- sdl2
+- async
 
 library:
   source-dirs: src
