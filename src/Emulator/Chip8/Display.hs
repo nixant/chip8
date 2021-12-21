@@ -60,17 +60,22 @@ windowHeight = 32
 scale = 20
 
 data DisplayCommand = Clear
-                    | ClearC (V4 Word8)
+                    | ClearC Color
                     | Present
                     | Draw Word8 Word8
-                    | DrawC Word8 Word8 (V4 Word8)
+                    | DrawC Word8 Word8 Color
                     | NoCommand
+
+data Color = Color Word8 Word8 Word8 Word8 
+
+colorToV4 (Color a r g b) = V4 a r g b
 
 display :: Chan DisplayCommand -> IO ()
 display chan = do
   initializeAll
   window <- createWindow "CHIP 8" defaultWindow {windowInitialSize = V2 (windowWidth * scale) (windowHeight * scale)}
   renderer <- createRenderer window (-1) defaultRenderer
+  rendererScale renderer $= V2 (fromIntegral scale) (fromIntegral scale)
   gameLoop chan renderer window
 
 gameLoop :: Chan DisplayCommand -> Renderer -> Window -> IO ()
@@ -92,24 +97,21 @@ eventLoop renderer = do
 displayLoop :: Chan DisplayCommand -> Renderer -> IO ()
 displayLoop chan renderer = do
   cmd <- readChan chan
-  rendererScale renderer $= V2 (fromIntegral scale) (fromIntegral scale)
   case cmd of
     Clear -> do
       rendererDrawColor renderer $= V4 0 0 0 0
       clear renderer
     ClearC c -> do
-      rendererDrawColor renderer $= c
+      rendererDrawColor renderer $= colorToV4 c
       clear renderer
     Draw x y -> do
       rendererDrawColor renderer $= V4 0 255 255 255
       drawPoint renderer (P $ V2 (fromIntegral x) (fromIntegral y))
     DrawC x y c -> do
-      rendererDrawColor renderer $= c
+      rendererDrawColor renderer $= colorToV4 c
       drawPoint renderer (P $ V2 (fromIntegral x) (fromIntegral y))
     Present ->  present renderer
     NoCommand -> return ()
   displayLoop chan renderer
 
 presentLoop renderer fps = present renderer >> threadDelay (1000000 `div` fps) >> presentLoop renderer fps 
-
-sprite renderer (x,y,h) = fillRect renderer (Just (Rectangle (P $ V2 x y) (V2 (x+8) (y+h))))

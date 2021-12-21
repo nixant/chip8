@@ -99,6 +99,15 @@ decode (0xF,x,5,5) = SMX (mkRegister x)
 decode (0xF,x,6,5) = SXM (mkRegister x)
 decode x = error $ "decode error/ invalid opcode: " <> show x
 
+draw :: HasDisplay a => a -> [(Word8, Word8)] -> IO (Bool,[DisplayCommand])
+draw d = foldM (\(f,ds) p@(x,y) -> do
+          val <- getDisplayPixel d p
+          flipDisplayPixel d p
+          let c = if val
+                    then Color 0 0 0 0
+                    else Color 0 255 255 255
+          return (f || val,DrawC x y c : ds)) (False, [])
+
 execute :: (HasChip8 env, MonadReader env m, MonadIO m) => Instruction -> m ()
 execute NOP = return ()
 execute CLS = return () -- TODO: Add Clear Screen when screen implemented
@@ -203,21 +212,24 @@ execute (RAND vx nn) = do
     setReg c8 vx (nn .&. rn)
 execute (DRAW vx vy n) = do -- TODO: implement display
   c8 <- ask
-  x <- liftIO $ getReg c8 vx
-  y <- liftIO $ getReg c8 vy
-  i <- liftIO $ getIR c8
-  p <- forM [0 .. n - 1] $ \row -> liftIO $ do
-          let addr = i + fromIntegral row
-          pixels <- getMemAt c8 addr
-          forM [0 .. 7] $ \col -> do
-            if pixels .&. (128 `shiftR` col) /= 0
-              then do
-                let x' = (x + fromIntegral col) `mod` fromIntegral windowWidth
-                let y' = (y + row) `mod` fromIntegral windowHeight
-                return $ Just (x', y')
-              else return Nothing
-  let ps = catMaybes $ concat p
-  liftIO $ writeManyBuffer c8 $ uncurry Draw <$> ps
+  liftIO $ do
+    x <- getReg c8 vx
+    y <- getReg c8 vy
+    i <- getIR c8
+    p <- forM [0 .. n - 1] $ \row -> do
+            let addr = i + fromIntegral row
+            pixels <- getMemAt c8 addr
+            forM [0 .. 7] $ \col -> do
+              if pixels .&. (128 `shiftR` col) /= 0
+                then do
+                  let x' = (x + fromIntegral col) `mod` fromIntegral windowWidth
+                  let y' = (y + row) `mod` fromIntegral windowHeight
+                  return $ Just (x', y')
+                else return Nothing
+    let ps = catMaybes $ concat p
+    (f,d) <- draw c8 ps
+    when f $ setReg c8 VF 1
+    liftIO $ writeManyBuffer c8 d
 execute (KP vx) = do -- TODO: Implement keys for KP, KNP, KINP
   return ()
 execute (KNP vx) = do
