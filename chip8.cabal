@@ -29,6 +29,7 @@ library
       Emulator.Chip8.CPU
       Emulator.Chip8.Display
       Emulator.Chip8.Instructions
+      Emulator.Chip8.IO
       Emulator.Chip8.Keyboard
       Emulator.Chip8.Memory
       Emulator.Chip8.Registers

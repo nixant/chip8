@@ -3,6 +3,7 @@
 
 module Emulator.Chip8.CPU where
 
+import Control.Concurrent
 import Control.Concurrent.MVar
 import Control.Concurrent.STM.TVar
 import Control.Monad.Reader
@@ -20,8 +21,9 @@ import Emulator.Chip8.Timers
 import Emulator.Chip8.Display
 import Control.Concurrent.Chan
 import Emulator.Chip8.Keyboard
+import Emulator.Chip8.IO
 
-type HasChip8 m = (HasStack m, HasTimers m, HasMemory m, HasRegisters m, HasIR m, HasDisplay m, HasKeyboard m)
+type HasChip8 m = (HasStack m, HasTimers m, HasMemory m, HasRegisters m, HasIR m, HasIO m)
 
 instance HasStack Chip8 where
   getStack = getStack . stack
@@ -50,8 +52,10 @@ instance HasIR Chip8 where
   setIR = setIR . ir
 
 instance HasDisplay Chip8 where
+  getDisplay Chip8 {scr} = getDisplay scr
   writeBuffer Chip8 {scr} = writeBuffer scr
   writeManyBuffer Chip8 {scr} = writeManyBuffer scr
+  getDisplayBuffer Chip8 {scr} = getDisplayBuffer scr
   getDisplayState Chip8 {scr} = getDisplayState scr 
   setDisplayState Chip8 {scr} = setDisplayState scr
   updateDisplayState Chip8 {scr} = updateDisplayState scr
@@ -61,6 +65,7 @@ instance HasKeyboard Chip8 where
   release = release . keyboard
   keyStatus = keyStatus . keyboard
   readPressed = readPressed . keyboard
+  getKeyboardState = getKeyboardState . keyboard
 
 defChip8 = do
   ram' <- newTVarIO def -- Memory 0x200 $ M.fromList $ (\x -> (x,fromIntegral $ x `mod` 256)) <$> [0..4095] 
@@ -70,7 +75,9 @@ defChip8 = do
   timers' <- newTVarIO def
   scr' <- defDisplay
   k <- newTVarIO $ M.fromList $ zip [K0 .. KF] $ repeat False
-  return $ Chip8 ram' reg' ir' stack' timers' scr' (Keyboard k)
+  let c8 = Chip8 ram' reg' ir' stack' timers' scr' (Keyboard k)
+  forkIO $ gameLoop c8
+  return c8
 
 data Chip8 =
   Chip8

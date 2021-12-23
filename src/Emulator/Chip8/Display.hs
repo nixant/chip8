@@ -17,10 +17,17 @@ import Data.Default
 
 type DisplayState = M.Map (Word8, Word8) Bool
 
-data Display' = Display' { displayState :: TVar DisplayState, displayBuffer :: Chan DisplayCommand}
+data Display' = Display' { displayState :: TVar DisplayState, displayBuffer :: Chan DisplayCommand, displayWindow :: Window, displayRenderer :: Renderer}
 
 defDisplay :: IO Display'
-defDisplay = Display' <$> initDisplayState <*> initDisplayBuffer
+defDisplay = do
+  initializeAll
+  dstate <- initDisplayState
+  dbuffer <- initDisplayBuffer
+  window <- createWindow "CHIP 8" defaultWindow {windowInitialSize = V2 (windowWidth * scale) (windowHeight * scale)}
+  renderer <- createRenderer window (-1) defaultRenderer
+  rendererScale renderer $= V2 (fromIntegral scale) (fromIntegral scale)
+  return $ Display' dstate dbuffer window renderer
 
 initDisplayState :: IO (TVar DisplayState)
 initDisplayState = newTVarIO $ M.fromList $ [((x,y), False) | x <- [0 .. fromIntegral windowWidth], y <- [0 .. fromIntegral windowHeight]]
@@ -29,8 +36,10 @@ initDisplayBuffer :: IO (Chan DisplayCommand)
 initDisplayBuffer = newChan
 
 class HasDisplay a where
+  getDisplay :: a -> Display'
   writeBuffer :: a -> DisplayCommand -> IO ()
   writeManyBuffer :: a -> [DisplayCommand] -> IO ()
+  getDisplayBuffer :: a -> IO (Chan DisplayCommand)
   getDisplayState :: a -> IO DisplayState
   setDisplayState :: a -> DisplayState -> IO ()
   updateDisplayState :: a -> (DisplayState -> DisplayState) -> IO ()
@@ -47,8 +56,10 @@ class HasDisplay a where
   flipDisplayPixel d p = updateDisplayPixel d p not
 
 instance HasDisplay Display' where
+  getDisplay = id
   writeBuffer Display' {displayBuffer} = writeChan displayBuffer
   writeManyBuffer Display' {displayBuffer} = writeList2Chan displayBuffer
+  getDisplayBuffer Display' {displayBuffer} = return displayBuffer
   getDisplayState Display' {displayState} = readTVarIO displayState
   setDisplayState Display' {displayState} = atomically . writeTVar displayState
   updateDisplayState Display' {displayState} = atomically . modifyTVar' displayState
@@ -70,29 +81,12 @@ data Color = Color Word8 Word8 Word8 Word8
 
 colorToV4 (Color a r g b) = V4 a r g b
 
-display :: Chan DisplayCommand -> IO ()
-display chan = do
-  initializeAll
-  window <- createWindow "CHIP 8" defaultWindow {windowInitialSize = V2 (windowWidth * scale) (windowHeight * scale)}
-  renderer <- createRenderer window (-1) defaultRenderer
-  rendererScale renderer $= V2 (fromIntegral scale) (fromIntegral scale)
-  gameLoop chan renderer window
-
-gameLoop :: Chan DisplayCommand -> Renderer -> Window -> IO ()
-gameLoop chan renderer window = concurrently_ (eventLoop renderer >> destroyWindow window)
-                                              (concurrently_ (displayLoop chan renderer) (presentLoop renderer 20))
-
-eventLoop :: Renderer -> IO ()
-eventLoop renderer = do
-  event <- waitEvent
-  let eventIsEscPress event =
-        case eventPayload event of
-          KeyboardEvent keyboardEvent ->
-            keyboardEventKeyMotion keyboardEvent == Pressed &&
-            keysymKeycode (keyboardEventKeysym keyboardEvent) == KeycodeEscape
-          _ -> False
-      escPressed = eventIsEscPress event
-  unless escPressed $ eventLoop renderer
+--display :: Chan DisplayCommand -> IO ()
+--display chan = do
+--  initializeAll
+--  window <- createWindow "CHIP 8" defaultWindow {windowInitialSize = V2 (windowWidth * scale) (windowHeight * scale)}
+--  renderer <- createRenderer window (-1) defaultRenderer
+--  gameLoop chan renderer window
 
 displayLoop :: Chan DisplayCommand -> Renderer -> IO ()
 displayLoop chan renderer = do
