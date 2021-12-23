@@ -26,18 +26,17 @@ import System.Random (randomRIO)
 import Emulator.Chip8.Registers (mkRegister)
 import Emulator.Chip8.Display
 import Control.Concurrent (writeList2Chan)
+import Emulator.Chip8.Keyboard
 
 newtype Emu a =
   Emu (ReaderT Chip8 IO a)
   deriving (Functor, Applicative, Monad, MonadReader Chip8, MonadIO) -- , MonadThrow, MonadCatch)
 
-runEmu :: Chip8 -> Emu a -> IO a
-runEmu env (Emu app) = runReaderT app env
+runEmu :: Emu a -> Chip8 -> IO a
+runEmu (Emu app) = runReaderT app
 
 runEmuDef :: Emu a -> IO a
-runEmuDef app = do
-  c8 <- defChip8
-  runEmu c8 app
+runEmuDef app = defChip8 >>= runEmu app
 
 fetch ::
      (HasChip8 env, MonadReader env m, MonadIO m)
@@ -230,15 +229,26 @@ execute (DRAW vx vy n) = do -- TODO: implement display
     (f,d) <- draw c8 ps
     when f $ setReg c8 VF 1
     liftIO $ writeManyBuffer c8 d
-execute (KP vx) = do -- TODO: Implement keys for KP, KNP, KINP
-  return ()
+execute (KP vx) = do
+  c8 <- ask
+  liftIO $ do
+    x <- getReg c8 vx
+    pressed <- keyStatus c8 $ toEnum $ fromIntegral x
+    when pressed $ modifyPC c8 (+ 2)
 execute (KNP vx) = do
-  return ()
+  c8 <- ask
+  liftIO $ do
+    x <- getReg c8 vx
+    pressed <- keyStatus c8 $ toEnum $ fromIntegral x
+    unless pressed $ modifyPC c8 (+ 2)
 execute (SXDT vx) = do
   c8 <- ask
   liftIO $ getDT c8 >>= setReg c8 vx
 execute (KINP vx) = do
-  return ()
+  c8 <- ask
+  liftIO $ do
+    kp <- readPressed c8
+    setReg c8 vx $ fromIntegral $ fromEnum kp
 execute (SDTX vx) = do
   c8 <- ask
   liftIO $ getReg c8 vx >>= setDT c8

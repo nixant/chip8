@@ -19,8 +19,9 @@ import Emulator.Chip8.Stack
 import Emulator.Chip8.Timers
 import Emulator.Chip8.Display
 import Control.Concurrent.Chan
+import Emulator.Chip8.Keyboard
 
-type HasChip8 m = (HasStack m, HasTimers m, HasMemory m, HasRegisters m, HasIR m, HasDisplay m)
+type HasChip8 m = (HasStack m, HasTimers m, HasMemory m, HasRegisters m, HasIR m, HasDisplay m, HasKeyboard m)
 
 instance HasStack Chip8 where
   getStack = getStack . stack
@@ -55,14 +56,21 @@ instance HasDisplay Chip8 where
   setDisplayState Chip8 {scr} = setDisplayState scr
   updateDisplayState Chip8 {scr} = updateDisplayState scr
 
+instance HasKeyboard Chip8 where
+  press = press . keyboard
+  release = release . keyboard
+  keyStatus = keyStatus . keyboard
+  readPressed = readPressed . keyboard
+
 defChip8 = do
   ram' <- newTVarIO def -- Memory 0x200 $ M.fromList $ (\x -> (x,fromIntegral $ x `mod` 256)) <$> [0..4095] 
   reg' <- newTVarIO def --Registers $ M.fromList $ zip [V0 .. VF] (repeat 0)
   ir' <- newTVarIO def
   stack' <- newTVarIO def
   timers' <- newTVarIO def
-  scr' <- defDisplay 
-  return $ Chip8 ram' reg' ir' stack' timers' scr' []
+  scr' <- defDisplay
+  k <- newTVarIO $ M.fromList $ zip [K0 .. KF] $ repeat False
+  return $ Chip8 ram' reg' ir' stack' timers' scr' (Keyboard k)
 
 data Chip8 =
   Chip8
@@ -72,5 +80,5 @@ data Chip8 =
     , stack :: TVar Stack -- Add a newtype with fixed size 16
     , timers :: TVar Timers
     , scr :: Display'
-    , keys :: [Bool] -- Add a newtype with size 16
+    , keyboard :: Keyboard -- Add a newtype with size 16
     }
