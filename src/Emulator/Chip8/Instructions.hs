@@ -25,8 +25,8 @@ data Instruction
   | MYX Register Register -- 8XY7 (VX = VY - VX clear VF if borrow)
   | LSX Register -- 8XYE (VX << = 1 store dropped bit in VF)
   | VXYNE Register Register -- 9XY0 (skip next if VX /= VY)
-  | SI Word16-- ANNN (set IR to NNN)
-  | JMV0 Word16-- BNNN (jump to V0 + NNN)
+  | SI Word16 -- ANNN (set IR to NNN)
+  | JMV0 Word16 -- BNNN (jump to V0 + NNN)
   | RAND Register Word8 -- CXNN (set VX to random && NN)
   | DRAW Register Register Word8 -- DXYN (draw an 8xN size sprite at values at VX and VY)
   | KP Register -- EX9E

@@ -2,7 +2,13 @@
 
 module Emulator.Chip8.Timers where
 
-import Control.Concurrent.STM (TVar, atomically, modifyTVar', readTVarIO, writeTVar)
+import Control.Concurrent.STM
+  ( TVar
+  , atomically
+  , modifyTVar'
+  , readTVarIO
+  , writeTVar
+  )
 import Data.Default
 import Data.Word (Word8)
 
@@ -50,7 +56,8 @@ instance HasTimers (TVar Timers) where
     atomically (modifyTVar' t tickTimers) >> readTVarIO t >>= \(Timers d s) ->
       timerAction d (timer d) >> timerAction s (timer s)
   getDT = fmap (timer . dt) . readTVarIO
-  setDT t d = atomically $ modifyTVar' t (\(Timers dt st) -> Timers dt {timer = d} st)
+  setDT t d =
+    atomically $ modifyTVar' t (\(Timers dt st) -> Timers dt {timer = d} st)
   getST = fmap (timer . st) . readTVarIO
-  setST t d = atomically $ modifyTVar' t (\(Timers dt st) -> Timers dt st {timer = d})
-
+  setST t d =
+    atomically $ modifyTVar' t (\(Timers dt st) -> Timers dt st {timer = d})

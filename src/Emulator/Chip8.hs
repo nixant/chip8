@@ -7,6 +7,8 @@
 module Emulator.Chip8 where
 
 import Control.Concurrent.MVar
+
+import Control.Concurrent (writeList2Chan)
 -- implement complete chip here
 import Control.Concurrent.STM.TVar
 import Control.Monad.Reader
@@ -14,19 +16,18 @@ import Control.Monad.STM
 import Data.Bits (Bits((.|.), shiftL), (.&.), shiftR, xor)
 import Data.Default
 import qualified Data.Map as M
-import Data.Maybe (fromMaybe, catMaybes)
+import Data.Maybe (catMaybes, fromMaybe)
 import Data.Word (Word16, Word8)
 import Emulator.Chip8.CPU
+import Emulator.Chip8.Display
 import Emulator.Chip8.Instructions
+import Emulator.Chip8.Keyboard
 import Emulator.Chip8.Memory
 import Emulator.Chip8.Registers
+import Emulator.Chip8.Registers (mkRegister)
 import Emulator.Chip8.Stack
 import Emulator.Chip8.Timers
 import System.Random (randomRIO)
-import Emulator.Chip8.Registers (mkRegister)
-import Emulator.Chip8.Display
-import Control.Concurrent (writeList2Chan)
-import Emulator.Chip8.Keyboard
 
 newtype Emu a =
   Emu (ReaderT Chip8 IO a)
@@ -58,7 +59,7 @@ mkWord8 (a, b) = fromIntegral a `shiftL` 4 .|. fromIntegral b
 mkWord12 (a, b, c) = fromIntegral a `shiftL` 8 .|. mkWord8 (b, c)
 
 getBCD :: Word8 -> [Word8]
-getBCD = fmap (read . (:[])) . show
+getBCD = fmap (read . (: [])) . show
 
 decode :: (Word8, Word8, Word8, Word8) -> Instruction
 decode (0, 0, 0, 0) = NOP -- no operation
@@ -81,31 +82,35 @@ decode (8, x, y, 6) = RSX (mkRegister x) -- vx >> = 1
 decode (8, x, y, 7) = MYX (mkRegister x) (mkRegister y) -- vx == vy - vx
 decode (8, x, y, 0xE) = LSX (mkRegister x) -- vx << = 1
 decode (9, x, y, 0) = VXYNE (mkRegister x) (mkRegister x) -- skip next if vx /= vy
-decode (0xA, a, b, c) = SI $ mkWord12 (a,b,c)
-decode (0xB, a, b, c) = JMV0 $ mkWord12 (a,b,c)
-decode (0xC, x, a, b) = RAND (mkRegister x) $ mkWord8 (a,b)
+decode (0xA, a, b, c) = SI $ mkWord12 (a, b, c)
+decode (0xB, a, b, c) = JMV0 $ mkWord12 (a, b, c)
+decode (0xC, x, a, b) = RAND (mkRegister x) $ mkWord8 (a, b)
 decode (0xD, x, y, a) = DRAW (mkRegister x) (mkRegister y) a
-decode (0xE,x,9,0xE) = KP (mkRegister x)
-decode (0xE,x,0xA,1) = KNP (mkRegister x)
-decode (0xF,x,0,7) = SXDT (mkRegister x)
-decode (0xF,x,0,0xA) = KINP (mkRegister x)
-decode (0xF,x,1,5) = SDTX (mkRegister x)
-decode (0xF,x,1,8) = SSTX (mkRegister x)
-decode (0xF,x,1,0xE) = SIX (mkRegister x)
-decode (0xF,x,2,9) = SIFX (mkRegister x)
-decode (0xF,x,3,3) = SIBX (mkRegister x)
-decode (0xF,x,5,5) = SMX (mkRegister x)
-decode (0xF,x,6,5) = SXM (mkRegister x)
+decode (0xE, x, 9, 0xE) = KP (mkRegister x)
+decode (0xE, x, 0xA, 1) = KNP (mkRegister x)
+decode (0xF, x, 0, 7) = SXDT (mkRegister x)
+decode (0xF, x, 0, 0xA) = KINP (mkRegister x)
+decode (0xF, x, 1, 5) = SDTX (mkRegister x)
+decode (0xF, x, 1, 8) = SSTX (mkRegister x)
+decode (0xF, x, 1, 0xE) = SIX (mkRegister x)
+decode (0xF, x, 2, 9) = SIFX (mkRegister x)
+decode (0xF, x, 3, 3) = SIBX (mkRegister x)
+decode (0xF, x, 5, 5) = SMX (mkRegister x)
+decode (0xF, x, 6, 5) = SXM (mkRegister x)
 decode x = error $ "decode error/ invalid opcode: " <> show x
 
-draw :: HasDisplay a => a -> [(Word8, Word8)] -> IO (Bool,[DisplayCommand])
-draw d = foldM (\(f,ds) p@(x,y) -> do
-          val <- getDisplayPixel d p
-          flipDisplayPixel d p
-          let c = if val
-                    then Color 0 0 0 0
-                    else Color 0 255 255 255
-          return (f || val,DrawC x y c : ds)) (False, [])
+draw :: HasDisplay a => a -> [(Word8, Word8)] -> IO (Bool, [DisplayCommand])
+draw d =
+  foldM
+    (\(f, ds) p@(x, y) -> do
+       val <- getDisplayPixel d p
+       flipDisplayPixel d p
+       let c =
+             if val
+               then Color 0 0 0 0
+               else Color 0 255 255 255
+       return (f || val, DrawC x y c : ds))
+    (False, [])
 
 execute :: (HasChip8 env, MonadReader env m, MonadIO m) => Instruction -> m ()
 execute NOP = return ()
@@ -209,24 +214,26 @@ execute (RAND vx nn) = do
   liftIO $ do
     rn <- randomRIO (minBound, maxBound)
     setReg c8 vx (nn .&. rn)
-execute (DRAW vx vy n) = do -- TODO: implement display
+execute (DRAW vx vy n) -- TODO: implement display
+ = do
   c8 <- ask
   liftIO $ do
     x <- getReg c8 vx
     y <- getReg c8 vy
     i <- getIR c8
-    p <- forM [0 .. n - 1] $ \row -> do
-            let addr = i + fromIntegral row
-            pixels <- getMemAt c8 addr
-            forM [0 .. 7] $ \col -> do
-              if pixels .&. (128 `shiftR` col) /= 0
-                then do
-                  let x' = (x + fromIntegral col) `mod` fromIntegral windowWidth
-                  let y' = (y + row) `mod` fromIntegral windowHeight
-                  return $ Just (x', y')
-                else return Nothing
+    p <-
+      forM [0 .. n - 1] $ \row -> do
+        let addr = i + fromIntegral row
+        pixels <- getMemAt c8 addr
+        forM [0 .. 7] $ \col -> do
+          if pixels .&. (128 `shiftR` col) /= 0
+            then do
+              let x' = (x + fromIntegral col) `mod` fromIntegral windowWidth
+              let y' = (y + row) `mod` fromIntegral windowHeight
+              return $ Just (x', y')
+            else return Nothing
     let ps = catMaybes $ concat p
-    (f,d) <- draw c8 ps
+    (f, d) <- draw c8 ps
     when f $ setReg c8 VF 1
     liftIO $ writeManyBuffer c8 d
 execute (KP vx) = do
@@ -260,12 +267,12 @@ execute (SIX vx) = do
   liftIO $ getReg c8 vx >>= modifyIR c8 . (+) . fromIntegral
 execute (SIFX vx) = do
   c8 <- ask
-  liftIO $ getReg c8 vx >>= setIR c8 . (*5) . fromIntegral
+  liftIO $ getReg c8 vx >>= setIR c8 . (* 5) . fromIntegral
 execute (SIBX vx) = do
   c8 <- ask
   liftIO $ do
     addr <- getIR c8
-    [a,b,c] <- getBCD <$> getReg c8 vx
+    [a, b, c] <- getBCD <$> getReg c8 vx
     setMemAt c8 addr a
     setMemAt c8 (addr + 1) b
     setMemAt c8 (addr + 2) c
@@ -273,12 +280,14 @@ execute (SMX vx) = do
   c8 <- ask
   liftIO $ do
     i <- getIR c8
-    mapM_ (\(v,addr) -> getReg c8 v >>= setMemAt c8 addr) $ zip [V0 .. vx] [i ..]
+    mapM_ (\(v, addr) -> getReg c8 v >>= setMemAt c8 addr) $
+      zip [V0 .. vx] [i ..]
 execute (SXM vx) = do
   c8 <- ask
   liftIO $ do
     i <- getIR c8
-    mapM_ (\(v,addr) -> getMemAt c8 addr >>= setReg c8 v) $ zip [V0 .. vx] [i ..]
+    mapM_ (\(v, addr) -> getMemAt c8 addr >>= setReg c8 v) $
+      zip [V0 .. vx] [i ..]
 execute x = error $ "unimplemented instruction: " <> show x
 
 cycleEmu :: (HasChip8 env, MonadReader env m, MonadIO m) => m ()

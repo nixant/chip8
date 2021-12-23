@@ -4,6 +4,7 @@
 module Emulator.Chip8.CPU where
 
 import Control.Concurrent
+import Control.Concurrent.Chan
 import Control.Concurrent.MVar
 import Control.Concurrent.STM.TVar
 import Control.Monad.Reader
@@ -13,17 +14,17 @@ import Data.Default
 import qualified Data.Map as M
 import Data.Maybe (fromMaybe)
 import Data.Word (Word16, Word8)
+import Emulator.Chip8.Display
+import Emulator.Chip8.IO
 import Emulator.Chip8.Instructions
+import Emulator.Chip8.Keyboard
 import Emulator.Chip8.Memory
 import Emulator.Chip8.Registers
 import Emulator.Chip8.Stack
 import Emulator.Chip8.Timers
-import Emulator.Chip8.Display
-import Control.Concurrent.Chan
-import Emulator.Chip8.Keyboard
-import Emulator.Chip8.IO
 
-type HasChip8 m = (HasStack m, HasTimers m, HasMemory m, HasRegisters m, HasIR m, HasIO m)
+type HasChip8 m
+   = (HasStack m, HasTimers m, HasMemory m, HasRegisters m, HasIR m, HasIO m)
 
 instance HasStack Chip8 where
   getStack = getStack . stack
@@ -56,7 +57,7 @@ instance HasDisplay Chip8 where
   writeBuffer Chip8 {scr} = writeBuffer scr
   writeManyBuffer Chip8 {scr} = writeManyBuffer scr
   getDisplayBuffer Chip8 {scr} = getDisplayBuffer scr
-  getDisplayState Chip8 {scr} = getDisplayState scr 
+  getDisplayState Chip8 {scr} = getDisplayState scr
   setDisplayState Chip8 {scr} = setDisplayState scr
   updateDisplayState Chip8 {scr} = updateDisplayState scr
 

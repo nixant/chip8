@@ -2,11 +2,17 @@
 
 module Emulator.Chip8.Registers where
 
-import Control.Concurrent.STM (TVar, atomically, modifyTVar', readTVarIO, writeTVar)
+import Control.Concurrent.STM
+  ( TVar
+  , atomically
+  , modifyTVar'
+  , readTVarIO
+  , writeTVar
+  )
 import Data.Default
 import qualified Data.Map as M
 import Data.Maybe (fromJust, fromMaybe)
-import Data.Word (Word8, Word16)
+import Data.Word (Word16, Word8)
 
 data Register
   = V0
