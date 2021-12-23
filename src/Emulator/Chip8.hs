@@ -59,10 +59,11 @@ mkWord12 (a, b, c) = fromIntegral a `shiftL` 8 .|. mkWord8 (b, c)
 
 getBCD :: Word8 -> [Word8]
 getBCD = pad3 . fmap (read . (: [])) . show
-  where pad3 [] = [0,0,0]
-        pad3 [a] = [0,0,a]
-        pad3 [a,b] = [0,a,b]
-        pad3 x = x
+  where
+    pad3 [] = [0, 0, 0]
+    pad3 [a] = [0, 0, a]
+    pad3 [a, b] = [0, a, b]
+    pad3 x = x
 
 decode :: (Word8, Word8, Word8, Word8) -> Instruction
 decode (0, 0, 0, 0) = NOP -- no operation
@@ -117,7 +118,9 @@ draw d =
 
 execute :: (HasChip8 env, MonadReader env m, MonadIO m) => Instruction -> m ()
 execute NOP = return ()
-execute CLS = return () -- TODO: Add Clear Screen when screen implemented
+execute CLS = do
+  c8 <- ask
+  liftIO $ writeBuffer c8 Clear
 execute RET = do
   c8 <- ask
   top <- liftIO $ pop c8
@@ -217,7 +220,7 @@ execute (RAND vx nn) = do
   liftIO $ do
     rn <- randomRIO (minBound, maxBound)
     setReg c8 vx (nn .&. rn)
-execute (DRAW vx vy n) -- TODO: implement display
+execute (DRAW vx vy n)
  = do
   c8 <- ask
   liftIO $ do
