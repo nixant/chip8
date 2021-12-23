@@ -63,21 +63,21 @@ eventLoop kb@(Keyboard k) = do
       case ( keysymKeycode (keyboardEventKeysym keyboardEvent)
            , keyboardEventKeyMotion keyboardEvent) of
         (Keycode1, Released) ->
-          (atomically $ modifyTVar k $ M.insert K0 False) >> eventLoop kb
-        (Keycode1, Pressed) ->
-          (atomically $ modifyTVar k $ M.insert K0 True) >> eventLoop kb
-        (Keycode2, Released) ->
           (atomically $ modifyTVar k $ M.insert K1 False) >> eventLoop kb
-        (Keycode2, Pressed) ->
+        (Keycode1, Pressed) ->
           (atomically $ modifyTVar k $ M.insert K1 True) >> eventLoop kb
-        (Keycode3, Released) ->
+        (Keycode2, Released) ->
           (atomically $ modifyTVar k $ M.insert K2 False) >> eventLoop kb
-        (Keycode3, Pressed) ->
+        (Keycode2, Pressed) ->
           (atomically $ modifyTVar k $ M.insert K2 True) >> eventLoop kb
-        (Keycode4, Released) ->
+        (Keycode3, Released) ->
           (atomically $ modifyTVar k $ M.insert K3 False) >> eventLoop kb
-        (Keycode4, Pressed) ->
+        (Keycode3, Pressed) ->
           (atomically $ modifyTVar k $ M.insert K3 True) >> eventLoop kb
+        (Keycode4, Released) ->
+          (atomically $ modifyTVar k $ M.insert KC False) >> eventLoop kb
+        (Keycode4, Pressed) ->
+          (atomically $ modifyTVar k $ M.insert KC True) >> eventLoop kb
         (KeycodeQ, Released) ->
           (atomically $ modifyTVar k $ M.insert K4 False) >> eventLoop kb
         (KeycodeQ, Pressed) ->
@@ -91,37 +91,37 @@ eventLoop kb@(Keyboard k) = do
         (KeycodeE, Pressed) ->
           (atomically $ modifyTVar k $ M.insert K6 True) >> eventLoop kb
         (KeycodeR, Released) ->
-          (atomically $ modifyTVar k $ M.insert K7 False) >> eventLoop kb
-        (KeycodeR, Pressed) ->
-          (atomically $ modifyTVar k $ M.insert K7 True) >> eventLoop kb
-        (KeycodeA, Released) ->
-          (atomically $ modifyTVar k $ M.insert K8 False) >> eventLoop kb
-        (KeycodeA, Pressed) ->
-          (atomically $ modifyTVar k $ M.insert K8 True) >> eventLoop kb
-        (KeycodeS, Released) ->
-          (atomically $ modifyTVar k $ M.insert K9 False) >> eventLoop kb
-        (KeycodeS, Pressed) ->
-          (atomically $ modifyTVar k $ M.insert K9 True) >> eventLoop kb
-        (KeycodeD, Released) ->
-          (atomically $ modifyTVar k $ M.insert KA False) >> eventLoop kb
-        (KeycodeD, Pressed) ->
-          (atomically $ modifyTVar k $ M.insert KA True) >> eventLoop kb
-        (KeycodeF, Released) ->
-          (atomically $ modifyTVar k $ M.insert KB False) >> eventLoop kb
-        (KeycodeF, Pressed) ->
-          (atomically $ modifyTVar k $ M.insert KB True) >> eventLoop kb
-        (KeycodeZ, Released) ->
-          (atomically $ modifyTVar k $ M.insert KC False) >> eventLoop kb
-        (KeycodeZ, Pressed) ->
-          (atomically $ modifyTVar k $ M.insert KC True) >> eventLoop kb
-        (KeycodeX, Released) ->
           (atomically $ modifyTVar k $ M.insert KD False) >> eventLoop kb
-        (KeycodeX, Pressed) ->
+        (KeycodeR, Pressed) ->
           (atomically $ modifyTVar k $ M.insert KD True) >> eventLoop kb
-        (KeycodeC, Released) ->
+        (KeycodeA, Released) ->
+          (atomically $ modifyTVar k $ M.insert K7 False) >> eventLoop kb
+        (KeycodeA, Pressed) ->
+          (atomically $ modifyTVar k $ M.insert K7 True) >> eventLoop kb
+        (KeycodeS, Released) ->
+          (atomically $ modifyTVar k $ M.insert K8 False) >> eventLoop kb
+        (KeycodeS, Pressed) ->
+          (atomically $ modifyTVar k $ M.insert K8 True) >> eventLoop kb
+        (KeycodeD, Released) ->
+          (atomically $ modifyTVar k $ M.insert K9 False) >> eventLoop kb
+        (KeycodeD, Pressed) ->
+          (atomically $ modifyTVar k $ M.insert K9 True) >> eventLoop kb
+        (KeycodeF, Released) ->
           (atomically $ modifyTVar k $ M.insert KE False) >> eventLoop kb
-        (KeycodeC, Pressed) ->
+        (KeycodeF, Pressed) ->
           (atomically $ modifyTVar k $ M.insert KE True) >> eventLoop kb
+        (KeycodeZ, Released) ->
+          (atomically $ modifyTVar k $ M.insert KA False) >> eventLoop kb
+        (KeycodeZ, Pressed) ->
+          (atomically $ modifyTVar k $ M.insert KA True) >> eventLoop kb
+        (KeycodeX, Released) ->
+          (atomically $ modifyTVar k $ M.insert K0 False) >> eventLoop kb
+        (KeycodeX, Pressed) ->
+          (atomically $ modifyTVar k $ M.insert K0 True) >> eventLoop kb
+        (KeycodeC, Released) ->
+          (atomically $ modifyTVar k $ M.insert KB False) >> eventLoop kb
+        (KeycodeC, Pressed) ->
+          (atomically $ modifyTVar k $ M.insert KB True) >> eventLoop kb
         (KeycodeV, Released) ->
           (atomically $ modifyTVar k $ M.insert KF False) >> eventLoop kb
         (KeycodeV, Pressed) ->
