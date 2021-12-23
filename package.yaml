@@ -21,6 +21,7 @@ dependencies:
 - random
 - sdl2
 - async
+- bytestring
 
 library:
   source-dirs: src

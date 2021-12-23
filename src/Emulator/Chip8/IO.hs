@@ -5,11 +5,12 @@ module Emulator.Chip8.IO where
 import Control.Concurrent.Async (concurrently_)
 import Emulator.Chip8.Display
 import Emulator.Chip8.Keyboard
+import Emulator.Chip8.Timers
 import SDL (destroyWindow)
 
 type HasIO m = (HasDisplay m, HasKeyboard m)
 
-gameLoop :: (HasIO m) => m -> IO ()
+gameLoop :: (HasIO m, HasTimers m) => m -> IO ()
 gameLoop c8 = do
   kb <- getKeyboardState c8
   let dsp = getDisplay c8
@@ -18,4 +19,4 @@ gameLoop c8 = do
       wd = displayWindow dsp
   concurrently_
     (eventLoop kb >> destroyWindow wd)
-    (concurrently_ (displayLoop db rn) (presentLoop rn 20))
+    (concurrently_ (displayLoop db rn) (concurrently_ (tickAfter c8 60) (presentLoop rn 60)))

@@ -2,6 +2,7 @@
 
 module Emulator.Chip8.Timers where
 
+import Control.Concurrent
 import Control.Concurrent.STM
   ( TVar
   , atomically
@@ -46,6 +47,8 @@ tickTimers (Timers d s) = Timers (tickTimer d) (tickTimer s)
 
 class HasTimers a where
   tick :: a -> IO ()
+  tickAfter :: a -> Int -> IO ()
+  tickAfter c t = tick c >> threadDelay (1000000 `div` t) >> tickAfter c t
   getDT :: a -> IO Word8
   setDT :: a -> Word8 -> IO ()
   getST :: a -> IO Word8

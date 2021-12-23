@@ -42,6 +42,7 @@ library
   build-depends:
       async
     , base >=4.7 && <5
+    , bytestring
     , containers
     , data-default
     , mtl
@@ -60,6 +61,7 @@ executable chip8
   build-depends:
       async
     , base >=4.7 && <5
+    , bytestring
     , chip8
     , containers
     , data-default
@@ -80,6 +82,7 @@ test-suite chip8-test
   build-depends:
       async
     , base >=4.7 && <5
+    , bytestring
     , chip8
     , containers
     , data-default

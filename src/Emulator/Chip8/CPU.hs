@@ -10,6 +10,7 @@ import Control.Concurrent.STM.TVar
 import Control.Monad.Reader
 import Control.Monad.STM
 import Data.Bits (Bits((.|.), shiftL), (.&.), shiftR, xor)
+import qualified Data.ByteString as BS
 import Data.Default
 import qualified Data.Map as M
 import Data.Maybe (fromMaybe)
@@ -22,6 +23,7 @@ import Emulator.Chip8.Memory
 import Emulator.Chip8.Registers
 import Emulator.Chip8.Stack
 import Emulator.Chip8.Timers
+import System.IO
 
 type HasChip8 m
    = (HasStack m, HasTimers m, HasMemory m, HasRegisters m, HasIR m, HasIO m)
@@ -68,8 +70,18 @@ instance HasKeyboard Chip8 where
   readPressed = readPressed . keyboard
   getKeyboardState = getKeyboardState . keyboard
 
+getROM :: FilePath -> IO (M.Map Word16 Word8)
+getROM rom = do
+    withFile ("roms/" <> rom) ReadMode $ \handle -> do
+        contents <- BS.unpack <$> BS.hGetContents handle
+        return $ M.fromList $ zip [0x200 ..] contents
+
 defChip8 = do
-  ram' <- newTVarIO def -- Memory 0x200 $ M.fromList $ (\x -> (x,fromIntegral $ x `mod` 256)) <$> [0..4095] 
+  putStrLn "Enter ROM Name: "
+  x <- getLine
+  rom <- getROM x
+  ram' <- newTVarIO def -- Memory 0x200 $ M.fromList $ (\x -> (x,fromIntegral $ x `mod` 256)) <$> [0..4095]
+  atomically $ modifyTVar ram' $ \(Memory p m) -> Memory p $ M.union rom m
   reg' <- newTVarIO def --Registers $ M.fromList $ zip [V0 .. VF] (repeat 0)
   ir' <- newTVarIO def
   stack' <- newTVarIO def

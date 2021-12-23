@@ -8,8 +8,7 @@ module Emulator.Chip8 where
 
 import Control.Concurrent.MVar
 
-import Control.Concurrent (writeList2Chan)
--- implement complete chip here
+import Control.Concurrent
 import Control.Concurrent.STM.TVar
 import Control.Monad.Reader
 import Control.Monad.STM
@@ -59,7 +58,11 @@ mkWord8 (a, b) = fromIntegral a `shiftL` 4 .|. fromIntegral b
 mkWord12 (a, b, c) = fromIntegral a `shiftL` 8 .|. mkWord8 (b, c)
 
 getBCD :: Word8 -> [Word8]
-getBCD = fmap (read . (: [])) . show
+getBCD = pad3 . fmap (read . (: [])) . show
+  where pad3 [] = [0,0,0]
+        pad3 [a] = [0,0,a]
+        pad3 [a,b] = [0,a,b]
+        pad3 x = x
 
 decode :: (Word8, Word8, Word8, Word8) -> Instruction
 decode (0, 0, 0, 0) = NOP -- no operation
@@ -291,4 +294,5 @@ execute (SXM vx) = do
 execute x = error $ "unimplemented instruction: " <> show x
 
 cycleEmu :: (HasChip8 env, MonadReader env m, MonadIO m) => m ()
-cycleEmu = fetch >>= execute . decode >> ask >>= liftIO . tick >> cycleEmu
+cycleEmu = do
+  fetch >>= execute . decode >> liftIO (threadDelay (1000000 `div` 600)) >> cycleEmu
