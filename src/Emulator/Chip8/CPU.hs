@@ -72,9 +72,9 @@ instance HasKeyboard Chip8 where
 
 getROM :: FilePath -> IO (M.Map Word16 Word8)
 getROM rom = do
-    withFile ("roms/" <> rom) ReadMode $ \handle -> do
-        contents <- BS.unpack <$> BS.hGetContents handle
-        return $ M.fromList $ zip [0x200 ..] contents
+  withFile ("roms/" <> rom) ReadMode $ \handle -> do
+    contents <- BS.unpack <$> BS.hGetContents handle
+    return $ M.fromList $ zip [0x200 ..] contents
 
 defChip8 = do
   putStrLn "Enter ROM Name: "

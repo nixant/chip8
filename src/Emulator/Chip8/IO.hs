@@ -19,4 +19,6 @@ gameLoop c8 = do
       wd = displayWindow dsp
   concurrently_
     (eventLoop kb >> destroyWindow wd)
-    (concurrently_ (displayLoop db rn) (concurrently_ (tickAfter c8 60) (presentLoop rn 60)))
+    (concurrently_
+       (displayLoop db rn)
+       (concurrently_ (tickAfter c8 60) (presentLoop rn 60)))

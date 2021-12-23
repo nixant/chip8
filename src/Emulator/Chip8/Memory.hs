@@ -99,7 +99,7 @@ fontSet =
   ]
 
 instance Default Memory where
-  def = Memory 0x200 $ M.fromList $ zip [0 ..] fontSet -- TODO: Add sprites and other read only data at start of memory
+  def = Memory 0x200 $ M.fromList $ zip [0 ..] fontSet
 
 class HasMemory a where
   setPC :: a -> Word16 -> IO ()
