@@ -12,7 +12,7 @@ import Control.Concurrent
 import Control.Concurrent.STM.TVar
 import Control.Monad.Reader
 import Control.Monad.STM
-import Data.Bits (Bits((.|.), shiftL), (.&.), shiftR, xor)
+import Data.Bits ((.|.), shiftL, (.&.), shiftR, xor)
 import Data.Default
 import qualified Data.Map as M
 import Data.Maybe (catMaybes, fromMaybe)
@@ -286,13 +286,13 @@ execute (SMX vx) = do
   c8 <- ask
   liftIO $ do
     i <- getIR c8
-    mapM_ (\(v, addr) -> getReg c8 v >>= setMemAt c8 addr) $
+    mapM_ (\(v, addr) -> getReg c8 v >>= setMemAt c8 addr >> incIR c8) $
       zip [V0 .. vx] [i ..]
 execute (SXM vx) = do
   c8 <- ask
   liftIO $ do
     i <- getIR c8
-    mapM_ (\(v, addr) -> getMemAt c8 addr >>= setReg c8 v) $
+    mapM_ (\(v, addr) -> getMemAt c8 addr >>= setReg c8 v >> incIR c8) $
       zip [V0 .. vx] [i ..]
 execute x = error $ "unimplemented instruction: " <> show x
 

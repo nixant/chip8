@@ -62,6 +62,8 @@ class HasIR a where
   setIR :: a -> Word16 -> IO ()
   modifyIR :: a -> (Word16 -> Word16) -> IO ()
   modifyIR c f = getIR c >>= setIR c . f
+  incIR :: a -> IO ()
+  incIR c = modifyIR c (+1) 
 
 instance HasIR (TVar Word16) where
   getIR = readTVarIO
