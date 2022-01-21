@@ -89,7 +89,6 @@ defChip8 = do
   scr' <- defDisplay
   k <- newTVarIO $ M.fromList $ zip [K0 .. KF] $ repeat False
   let c8 = Chip8 ram' reg' ir' stack' timers' scr' (Keyboard k)
-  forkIO $ gameLoop c8
   return c8
 
 data Chip8 =

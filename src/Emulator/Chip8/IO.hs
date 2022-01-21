@@ -2,11 +2,11 @@
 
 module Emulator.Chip8.IO where
 
-import Control.Concurrent.Async (concurrently_)
+import Control.Concurrent.Async (concurrently_, race_)
 import Emulator.Chip8.Display
 import Emulator.Chip8.Keyboard
 import Emulator.Chip8.Timers
-import SDL (destroyWindow)
+import SDL.Video ( destroyWindow )
 
 type HasIO m = (HasDisplay m, HasKeyboard m)
 
@@ -17,8 +17,8 @@ gameLoop c8 = do
       db = displayBuffer dsp
       rn = displayRenderer dsp
       wd = displayWindow dsp
-  concurrently_
+  race_
     (eventLoop kb >> destroyWindow wd)
     (concurrently_
        (displayLoop db rn)
-       (concurrently_ (tickAfter c8 60) (presentLoop rn 60)))
+       (concurrently_ (tickAfter c8 60) (presentLoop rn 600)))

@@ -27,15 +27,18 @@ import Emulator.Chip8.Registers (mkRegister)
 import Emulator.Chip8.Stack
 import Emulator.Chip8.Timers
 import System.Random (randomRIO)
+import Control.Concurrent.Async (race)
+import Emulator.Chip8.IO (gameLoop)
 
 newtype Emu a =
   Emu (ReaderT Chip8 IO a)
   deriving (Functor, Applicative, Monad, MonadReader Chip8, MonadIO) -- , MonadThrow, MonadCatch)
 
-runEmu :: Emu a -> Chip8 -> IO a
-runEmu (Emu app) = runReaderT app
+runEmu :: Emu a -> Chip8 -> IO ()
+runEmu (Emu app) c8 = void $ race (runReaderT app c8) (gameLoop c8)
+  
 
-runEmuDef :: Emu a -> IO a
+runEmuDef :: Emu a -> IO ()
 runEmuDef app = defChip8 >>= runEmu app
 
 fetch ::
@@ -185,9 +188,8 @@ execute (RSX vx) = do
   c8 <- ask
   liftIO $ do
     x <- getReg c8 vx
-    let vf = x .&. 1
     setReg c8 vx $ x `shiftR` 1
-    setReg c8 vx vf
+    setReg c8 VF $ x .&. 1
 execute (MYX vx vy) = do
   c8 <- ask
   liftIO $ do
@@ -201,9 +203,8 @@ execute (LSX vx) = do
   c8 <- ask
   liftIO $ do
     x <- getReg c8 vx
-    let vf = x `shiftR` 7
     setReg c8 vx $ x `shiftL` 1
-    setReg c8 vx vf
+    setReg c8 vx $ x `shiftR` 7
 execute (VXYNE vx vy) = do
   c8 <- ask
   eq <- liftIO $ (/=) <$> getReg c8 vx <*> getReg c8 vy
@@ -261,7 +262,9 @@ execute (KINP vx) = do
   c8 <- ask
   liftIO $ do
     kp <- readPressed c8
-    setReg c8 vx $ fromIntegral $ fromEnum kp
+    case kp of
+      Nothing -> decPC c8 >> decPC c8
+      Just k -> setReg c8 vx $ fromIntegral $ fromEnum k
 execute (SDTX vx) = do
   c8 <- ask
   liftIO $ getReg c8 vx >>= setDT c8
@@ -286,16 +289,24 @@ execute (SMX vx) = do
   c8 <- ask
   liftIO $ do
     i <- getIR c8
-    mapM_ (\(v, addr) -> getReg c8 v >>= setMemAt c8 addr >> incIR c8) $
+    mapM_ (\(v, addr) -> getReg c8 v >>= setMemAt c8 addr) $
       zip [V0 .. vx] [i ..]
+    setIR c8 i
 execute (SXM vx) = do
   c8 <- ask
   liftIO $ do
     i <- getIR c8
-    mapM_ (\(v, addr) -> getMemAt c8 addr >>= setReg c8 v >> incIR c8) $
+    mapM_ (\(v, addr) -> getMemAt c8 addr >>= setReg c8 v) $
       zip [V0 .. vx] [i ..]
+    setIR c8 i
 execute x = error $ "unimplemented instruction: " <> show x
 
-cycleEmu :: (HasChip8 env, MonadReader env m, MonadIO m) => m ()
-cycleEmu = do
-  fetch >>= execute . decode >> liftIO (threadDelay (1000000 `div` 600)) >> cycleEmu
+cycleEmu :: (HasChip8 env, MonadReader env m, MonadIO m) => MVar Bool -> m ()
+-- cycleEmu m = liftIO (takeMVar m) >> fetch >>= execute . decode >> cycleEmu m
+cycleEmu m = liftIO (takeMVar m) >> fetch >>= \op -> liftIO (print (decode op)) >> execute (decode op) >> cycleEmu m
+
+timeCPU :: MVar Bool -> IO ()
+timeCPU m = forever $ do
+  putMVar m True
+  threadDelay (1000000 `div` 600)
+

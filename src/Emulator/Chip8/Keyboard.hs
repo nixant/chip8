@@ -37,7 +37,7 @@ class HasKeyboard k where
   press :: k -> Key -> IO ()
   release :: k -> Key -> IO ()
   keyStatus :: k -> Key -> IO Bool
-  readPressed :: k -> IO Key
+  readPressed :: k -> IO (Maybe Key)
   getKeyboardState :: k -> IO Keyboard
 
 instance HasKeyboard Keyboard where
@@ -46,13 +46,18 @@ instance HasKeyboard Keyboard where
   release (Keyboard k) key = do
     atomically $ modifyTVar k $ M.insert key False
   keyStatus (Keyboard k) key = M.findWithDefault False key <$> readTVarIO k
-  readPressed (Keyboard k) = loop k
-    where
-      loop km = do
-        kb <- M.assocs . M.filter id <$> readTVarIO km
-        if null kb
-          then loop km
-          else return . fst . head $ kb
+  --readPressed (Keyboard k) = loop k
+  --  where
+  --    loop km = do
+  --      kb <- M.assocs . M.filter id <$> readTVarIO km
+  --      if null kb
+  --        then loop km
+  --        else return . fst . head $ kb
+  readPressed (Keyboard k) = do
+    kb <- M.assocs . M.filter id <$> readTVarIO k
+    if null kb
+      then return Nothing
+      else return . Just . fst . head $ kb
   getKeyboardState = return
 
 eventLoop :: Keyboard -> IO ()
