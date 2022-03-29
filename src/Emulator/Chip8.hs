@@ -198,7 +198,7 @@ execute (MYX vx vy) = do
     if y < x
       then setReg c8 VF 0
       else setReg c8 VF 1
-    setReg c8 vx $ y - x
+    setReg c8 VF $ y - x
 execute (LSX vx) = do
   c8 <- ask
   liftIO $ do
