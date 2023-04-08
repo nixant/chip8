@@ -76,7 +76,7 @@ decode (1, a, b, c) = JMP $ mkWord12 (a, b, c) -- jump to address
 decode (2, a, b, c) = CALL $ mkWord12 (a, b, c) -- call subroutine
 decode (3, x, a, b) = VXE (mkRegister x) $ mkWord8 (a, b) -- skip next if vx == nn
 decode (4, x, a, b) = VXNE (mkRegister x) $ mkWord8 (a, b) -- skip next if vx /= nn
-decode (5, x, y, 0) = VXYE (mkRegister x) (mkRegister x) -- skip next if vx == vy
+decode (5, x, y, 0) = VXYE (mkRegister x) (mkRegister y) -- skip next if vx == vy
 decode (6, x, a, b) = SVX (mkRegister x) $ mkWord8 (a, b) -- vx = nn
 decode (7, x, a, b) = AVX (mkRegister x) $ mkWord8 (a, b) -- vx += nn
 decode (8, x, y, 0) = SVXY (mkRegister x) (mkRegister y) -- vx = vy
@@ -88,7 +88,7 @@ decode (8, x, y, 5) = MXY (mkRegister x) (mkRegister y) -- vx -= vy
 decode (8, x, y, 6) = RSX (mkRegister x) -- vx >> = 1
 decode (8, x, y, 7) = MYX (mkRegister x) (mkRegister y) -- vx == vy - vx
 decode (8, x, y, 0xE) = LSX (mkRegister x) -- vx << = 1
-decode (9, x, y, 0) = VXYNE (mkRegister x) (mkRegister x) -- skip next if vx /= vy
+decode (9, x, y, 0) = VXYNE (mkRegister x) (mkRegister y) -- skip next if vx /= vy
 decode (0xA, a, b, c) = SI $ mkWord12 (a, b, c)
 decode (0xB, a, b, c) = JMV0 $ mkWord12 (a, b, c)
 decode (0xC, x, a, b) = RAND (mkRegister x) $ mkWord8 (a, b)
@@ -204,7 +204,7 @@ execute (LSX vx) = do
   liftIO $ do
     x <- getReg c8 vx
     setReg c8 vx $ x `shiftL` 1
-    setReg c8 vx $ x `shiftR` 7
+    setReg c8 VF $ x `shiftR` 7
 execute (VXYNE vx vy) = do
   c8 <- ask
   eq <- liftIO $ (/=) <$> getReg c8 vx <*> getReg c8 vy
@@ -299,11 +299,10 @@ execute (SXM vx) = do
     mapM_ (\(v, addr) -> getMemAt c8 addr >>= setReg c8 v) $
       zip [V0 .. vx] [i ..]
     setIR c8 i
-execute x = error $ "unimplemented instruction: " <> show x
 
 cycleEmu :: (HasChip8 env, MonadReader env m, MonadIO m) => MVar Bool -> m ()
 -- cycleEmu m = liftIO (takeMVar m) >> fetch >>= execute . decode >> cycleEmu m
-cycleEmu m = liftIO (takeMVar m) >> fetch >>= \op -> liftIO (print (decode op)) >> execute (decode op) >> cycleEmu m
+cycleEmu m = liftIO (takeMVar m) >> fetch >>= \op -> execute (decode op) >> cycleEmu m
 
 timeCPU :: MVar Bool -> IO ()
 timeCPU m = forever $ do
